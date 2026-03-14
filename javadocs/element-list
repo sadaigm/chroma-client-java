@@ -1,0 +1,8 @@
+com.sa.gms.restclient.chromadb.clients
+com.sa.gms.restclient.chromadb.config
+com.sa.gms.restclient.chromadb.connection
+com.sa.gms.restclient.chromadb.constants
+com.sa.gms.restclient.chromadb.context
+com.sa.gms.restclient.chromadb.core
+com.sa.gms.restclient.chromadb.dto
+com.sa.gms.restclient.chromadb.interceptor
