@@ -11,7 +11,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.util.Assert;
+import org.springframework.web.server.ResponseStatusException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -68,78 +70,85 @@ class TenantInterceptorTest {
 
     @Test
     @DisplayName("Should handle missing tenant ID header")
-    void testPreHandleWithMissingHeader() throws Exception {
+    void testPreHandleWithMissingHeader() {
         // Arrange
         String requestUri = "/api/test";
         when(request.getHeader("TENANT_ID")).thenReturn(null);
         when(request.getRequestURI()).thenReturn(requestUri);
 
-        // Act
-        boolean result = tenantInterceptor.preHandle(request, response, null);
-
-        // Assert
-        assertTrue(result);
+        // Act & Assert
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
+            tenantInterceptor.preHandle(request, response, null);
+        });
+        assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatusCode());
+        assertEquals("Tenant ID header 'TENANT_ID' is required", exception.getReason());
         assertNull(TenantContextHolder.getTenantId());
         verify(request).getHeader("TENANT_ID");
-        verify(request).getRequestURI();
+        // getRequestURI is called twice when exception is thrown (line 58 and 62)
+        verify(request, times(2)).getRequestURI();
     }
 
     @Test
     @DisplayName("Should handle empty tenant ID header")
-    void testPreHandleWithEmptyHeader() throws Exception {
+    void testPreHandleWithEmptyHeader() {
         // Arrange
         String tenantIdHeader = "";
         String requestUri = "/api/test";
         when(request.getHeader("TENANT_ID")).thenReturn(tenantIdHeader);
         when(request.getRequestURI()).thenReturn(requestUri);
 
-        // Act
-        boolean result = tenantInterceptor.preHandle(request, response, null);
-
-        // Assert
-        assertTrue(result);
+        // Act & Assert
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
+            tenantInterceptor.preHandle(request, response, null);
+        });
+        assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatusCode());
+        assertEquals("Tenant ID header 'TENANT_ID' is required", exception.getReason());
         assertNull(TenantContextHolder.getTenantId());
         verify(request).getHeader("TENANT_ID");
-        verify(request).getRequestURI();
+        // getRequestURI is called twice when exception is thrown (line 58 and 62)
+        verify(request, times(2)).getRequestURI();
     }
 
     @Test
     @DisplayName("Should handle invalid tenant ID format")
-    void testPreHandleWithInvalidTenantIdFormat() throws Exception {
+    void testPreHandleWithInvalidTenantIdFormat() {
         // Arrange
         String tenantIdHeader = "invalid";
         String requestUri = "/api/test";
         when(request.getHeader("TENANT_ID")).thenReturn(tenantIdHeader);
         when(request.getRequestURI()).thenReturn(requestUri);
 
-        // Act
-        boolean result = tenantInterceptor.preHandle(request, response, null);
-
-        // Assert
-        assertTrue(result);
+        // Act & Assert
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
+            tenantInterceptor.preHandle(request, response, null);
+        });
+        assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatusCode());
+        assertEquals("Invalid tenant ID format in header: invalid", exception.getReason());
         assertNull(TenantContextHolder.getTenantId());
         verify(request).getHeader("TENANT_ID");
-        verify(request).getRequestURI();
+        // getRequestURI is called twice when exception is thrown (line 54 and 62)
+        verify(request, times(2)).getRequestURI();
     }
 
     @Test
     @DisplayName("Should handle tenant ID with leading/trailing spaces")
-    void testPreHandleWithSpacesInTenantId() throws Exception {
+    void testPreHandleWithSpacesInTenantId() {
         // Arrange
         String tenantIdHeader = " 12345 ";
         String requestUri = "/api/test";
         when(request.getHeader("TENANT_ID")).thenReturn(tenantIdHeader);
         when(request.getRequestURI()).thenReturn(requestUri);
 
-        // Act
-        boolean result = tenantInterceptor.preHandle(request, response, null);
-
-        // Assert
-        assertTrue(result);
-        // Should fail to parse due to spaces
+        // Act & Assert
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
+            tenantInterceptor.preHandle(request, response, null);
+        });
+        assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatusCode());
+        assertEquals("Invalid tenant ID format in header:  12345 ", exception.getReason());
         assertNull(TenantContextHolder.getTenantId());
         verify(request).getHeader("TENANT_ID");
-        verify(request).getRequestURI();
+        // getRequestURI is called twice when exception is thrown (line 54 and 62)
+        verify(request, times(2)).getRequestURI();
     }
 
     @Test
@@ -247,16 +256,20 @@ try {
         when(request.getHeader("TENANT_ID")).thenReturn(null);
         when(request.getRequestURI()).thenReturn(requestUri);
 
-        // Act
-        tenantInterceptor.preHandle(request, response, null);
-        assertNull(TenantContextHolder.getTenantId());
+        // Act & Assert - preHandle should throw exception
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
+            tenantInterceptor.preHandle(request, response, null);
+        });
+        assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatusCode());
+        assertEquals("Tenant ID header 'TENANT_ID' is required", exception.getReason());
         
+        // Even though preHandle threw exception, afterCompletion should still work
         tenantInterceptor.afterCompletion(request, response, null, null);
 
         // Assert
         assertNull(TenantContextHolder.getTenantId());
-        // getRequestURI is called once in preHandle (line 38) and once in afterCompletion (line 54)
-        verify(request, times(1)).getRequestURI();
+        // getRequestURI is called twice in preHandle when exception is thrown (line 58 and 62)
+        verify(request, times(2)).getRequestURI();
     }
 
     @Test
@@ -342,18 +355,21 @@ try {
         when(request.getHeader("TENANT_ID")).thenReturn(tenantIdHeader);
         when(request.getRequestURI()).thenReturn(requestUri);
 
-        // Act - Pre-handle
-        boolean preResult = tenantInterceptor.preHandle(request, response, null);
+        // Act & Assert - Pre-handle should throw exception
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
+            tenantInterceptor.preHandle(request, response, null);
+        });
+        assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatusCode());
+        assertEquals("Invalid tenant ID format in header: invalid", exception.getReason());
         
-        // Simulate request processing
+        // Simulate request processing - tenant ID should not be set
         Integer tenantId = TenantContextHolder.getTenantId();
+        assertNull(tenantId);
         
-        // Act - After completion
+        // Act - After completion should still work
         tenantInterceptor.afterCompletion(request, response, null, null);
 
         // Assert
-        assertTrue(preResult);
-        assertNull(tenantId);
         assertNull(TenantContextHolder.getTenantId());
     }
 
