@@ -7,7 +7,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 /**
@@ -50,9 +52,11 @@ public class TenantInterceptor implements HandlerInterceptor {
                     logger.debug("Tenant ID {} set in context for request: {}", tenantId, request.getRequestURI());
                 } catch (NumberFormatException e) {
                     logger.warn("Invalid tenant ID format in header: {} for request: {}", tenantIdHeader, request.getRequestURI());
+                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid tenant ID format in header: " + tenantIdHeader);
                 }
             } else {
                 logger.warn("Tenant ID header '{}' not found or empty for request: {}", VectorConstant.TENANT_ID_HEADER, request.getRequestURI());
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Tenant ID header '" + VectorConstant.TENANT_ID_HEADER + "' is required");
             }
         } catch (Exception e) {
             logger.error("Error extracting tenant ID from request: {}", request.getRequestURI(), e);
